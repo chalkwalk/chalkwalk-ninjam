@@ -183,7 +183,7 @@ ByteBuffer buildAuthReply(bool granted, const std::string &errorMessage,
   appendBytes(b, &flag, 1);
   appendBytes(b, errorMessage.c_str(),
            (size_t)errorMessage.size() + 1);
-  const std::uint8_t mc = (std::uint8_t)std::clamp(0, 255, maxChannels);
+  const std::uint8_t mc = (std::uint8_t)std::clamp(maxChannels, 0, 255);
   appendBytes(b, &mc, 1);
   return b;
 }
@@ -380,13 +380,14 @@ ByteBuffer buildUserInfo(const std::vector<UserInfoEntry> &entries) {
   ByteBuffer b;
   for (const auto &e : entries) {
     const std::uint8_t active = e.active ? 1 : 0;
-    const std::uint8_t chIdx = (std::uint8_t)std::clamp(0, 255, e.channelIndex);
+    const std::uint8_t chIdx =
+        (std::uint8_t)std::clamp(e.channelIndex, 0, 255);
     appendBytes(b, &active, 1);
     appendBytes(b, &chIdx, 1);
     const std::uint16_t leVol =
         littleEndian((std::uint16_t)(std::int16_t)e.volume);
     appendBytes(b, &leVol, 2);
-    const std::int8_t pan = (std::int8_t)std::clamp(-128, 127, e.pan);
+    const std::int8_t pan = (std::int8_t)std::clamp(e.pan, -128, 127);
     appendBytes(b, &pan, 1);
     appendBytes(b, &e.flags, 1);
     appendBytes(b, e.username.c_str(),

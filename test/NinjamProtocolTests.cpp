@@ -51,6 +51,7 @@ public:
     runParserTests();
     runTruncationTests();
     runBuilderTests();
+    runClampTests();
     runAuthTests();
   }
 
@@ -574,6 +575,56 @@ public:
     {
       expectEquals((int)buildChannelInfo({}).size(), 2);
     }
+  }
+
+  // -------------------------------------------------------------------
+  // The three builder fields that pass through a clamp.
+  //
+  // All three had the argument order wrong: juce::jlimit takes
+  // (lo, hi, value) and std::clamp takes (value, lo, hi), and the port from
+  // antiphon transcribed the order rather than the meaning. So
+  // std::clamp(0, 255, 32) asked for 0 clamped to the range [255, 32] --
+  // undefined behaviour on an inverted range, which libstdc++ catches with an
+  // assertion when they are enabled and which otherwise quietly returns 255.
+  //
+  // None of the three was covered, which is exactly why the suite stayed
+  // green through the mistake. The numbers below are the whole test: each one
+  // is a value strictly inside its range, so it can only pass if the value
+  // rather than a bound comes out the other end.
+  // -------------------------------------------------------------------
+  void runClampTests() {
+    beginTest("clamped fields carry their value, not their bound");
+
+    // maxChannels is the last byte of the auth reply. A server that sends the
+    // wrong cap here stops a stock client transmitting on the channels above
+    // it, so this byte is load-bearing rather than cosmetic.
+    expectEquals((int)buildAuthReply(true, "", 32).back(), 32,
+                 "the channel cap must be the value, not the upper bound");
+    expectEquals((int)buildAuthReply(true, "", 300).back(), 255,
+                 "a cap wider than a byte still saturates");
+    expectEquals((int)buildAuthReply(true, "", -5).back(), 0,
+                 "a negative cap still floors at zero");
+
+    // Channel index is byte 1 of a user info record; pan is byte 4.
+    UserInfoEntry e;
+    e.active = true;
+    e.channelIndex = 3;
+    e.pan = 100;
+    e.username = "u";
+    e.channelName = "c";
+
+    auto info = buildUserInfo({e});
+    expectEquals((int)info[1], 3, "channel index must be the value");
+    expectEquals((int)(std::int8_t)info[4], 100, "pan must be the value");
+
+    e.pan = -100;
+    expectEquals((int)(std::int8_t)buildUserInfo({e})[4], -100,
+                 "a pan hard left survives the clamp");
+
+    e.pan = 0;
+    e.channelIndex = 400;
+    expectEquals((int)buildUserInfo({e})[1], 255,
+                 "a channel index wider than a byte still saturates");
   }
 
   void runAuthTests() {
