@@ -18,7 +18,11 @@ add_library(chalkwalk::ninjam ALIAS chalkwalk_ninjam)
 target_include_directories(chalkwalk_ninjam
     PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 
-target_compile_features(chalkwalk_ninjam PUBLIC cxx_std_20)
+# C++17, not 20, and PUBLIC means this is a demand on every consumer -- so it
+# is the lowest this library actually needs. It briefly required C++20 for
+# std::endian, which cost antiphon a language-standard bump it had not asked
+# for: `concept` is an identifier there and a keyword in C++20.
+target_compile_features(chalkwalk_ninjam PUBLIC cxx_std_17)
 set_target_properties(chalkwalk_ninjam PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 # Ogg Vorbis, for the audio NINJAM actually carries.
