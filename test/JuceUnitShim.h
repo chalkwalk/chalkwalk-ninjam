@@ -53,6 +53,9 @@ private:
 
 }  // namespace shim
 
+// Argument-count dispatch: expect(cond) and expect(cond, msg) both exist in
+// juce::UnitTest. This needs a CONFORMING preprocessor -- see the MSVC note in
+// test/CMakeLists.txt, where it silently picked the wrong arm.
 #define expect(...) SHIM_EXPECT_PICK(__VA_ARGS__, SHIM_EXPECT2, SHIM_EXPECT1)(__VA_ARGS__)
 #define SHIM_EXPECT_PICK(_1, _2, NAME, ...) NAME
 #define SHIM_EXPECT1(cond)                                                     \

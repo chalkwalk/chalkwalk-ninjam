@@ -23,7 +23,12 @@ target_link_libraries(chalkwalk_ninjam_tests
 # rather than a warning -- so an unguarded list breaks the Windows build at the
 # command line, before a single file is compiled.
 if(MSVC)
-    target_compile_options(chalkwalk_ninjam_tests PRIVATE /W4)
+    # /Zc:preprocessor -- MSVC's traditional preprocessor treats __VA_ARGS__ as
+    # a single token, so the argument-count dispatch in JuceUnitShim.h picks the
+    # wrong macro and `expect(cond, msg)` becomes `CHECK((cond, msg))` -- the
+    # comma operator, yielding the message. It compiled on gcc and clang and
+    # failed only here, which is the whole argument for building on three.
+    target_compile_options(chalkwalk_ninjam_tests PRIVATE /W4 /Zc:preprocessor)
 else()
     target_compile_options(chalkwalk_ninjam_tests
         PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
