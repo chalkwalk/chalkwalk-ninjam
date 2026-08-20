@@ -17,6 +17,13 @@ It works, and it is the only approach that does at intercontinental distances.
 | `ChannelMix.h` | Summing remote channels with per-channel gain and pan |
 | `Bytes.h` | A byte buffer and little-endian conversion |
 
+## Documentation
+
+**[docs/PROTOCOL.md](docs/PROTOCOL.md)** is the guide: what the conversation
+is, frame by frame, with the login handshake, the interval grid, how audio is
+carried, and what it takes to write a client or a bot. Start there — the
+headers tell you what the functions are, and that tells you what they are for.
+
 ## What this is not
 
 **It is not a client.** There is no socket, no file, no thread and no audio
