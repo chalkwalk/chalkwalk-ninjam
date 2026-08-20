@@ -48,7 +48,10 @@ judge it for themselves.
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
-Needs `libogg` and `libvorbis`. Standalone with nothing else, which is the test
+Clone with `--recursive`: libogg and libvorbis are vendored as submodules
+rather than found on the system, because a system package is not something a
+library can rely on -- the first CI run proved it by passing on Linux and
+failing on macOS and Windows. Standalone with nothing else, which is the test
 of the boundary rather than a convenience.
 
 The tests came from a JUCE plugin and use `juce::UnitTest`'s verbs, which a

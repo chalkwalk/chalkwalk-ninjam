@@ -21,19 +21,22 @@ target_include_directories(chalkwalk_ninjam
 target_compile_features(chalkwalk_ninjam PUBLIC cxx_std_20)
 set_target_properties(chalkwalk_ninjam PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-# Ogg Vorbis, for the audio NINJAM actually carries. The only dependency, and
-# the codec is a specification you could fail to meet -- exactly the case where
-# taking one beats writing one.
-find_package(PkgConfig QUIET)
-if(PkgConfig_FOUND)
-    pkg_check_modules(VORBIS QUIET vorbis vorbisenc ogg)
-endif()
-if(VORBIS_FOUND)
-    target_include_directories(chalkwalk_ninjam PUBLIC ${VORBIS_INCLUDE_DIRS})
-    target_link_libraries(chalkwalk_ninjam PUBLIC ${VORBIS_LIBRARIES})
-else()
-    target_link_libraries(chalkwalk_ninjam PUBLIC vorbis vorbisenc ogg)
-endif()
+# Ogg Vorbis, for the audio NINJAM actually carries.
+#
+# Vendored as submodules rather than found on the system, because a system
+# package is not a thing you can rely on: the first CI run failed on macOS and
+# Windows for exactly that reason while passing on Linux. A codec is also a
+# specification you could fail to meet, which is the case where taking a
+# dependency beats writing one -- so the question was only ever how to get it,
+# not whether.
+#
+# BUILD_TESTING off before adding them: xiph's projects register their own
+# tests with ctest, and a consumer's `ctest` should run this library's suite,
+# not libogg's.
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+add_subdirectory(modules/ogg EXCLUDE_FROM_ALL)
+add_subdirectory(modules/vorbis EXCLUDE_FROM_ALL)
+target_link_libraries(chalkwalk_ninjam PUBLIC vorbis vorbisenc ogg)
 
 if(MSVC)
     target_compile_options(chalkwalk_ninjam PRIVATE /W4)
