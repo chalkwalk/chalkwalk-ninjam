@@ -3,7 +3,7 @@
 # Written to work BOTH nested inside a parent project and standalone, so that
 # `cmake -B build && ctest` works from this directory with nothing else on the
 # machine. That is not a convenience: a library that only builds inside its
-# parent has not actually been extracted. See ../../../ECOSYSTEM.md.
+# parent has not actually been extracted.
 
 cmake_minimum_required(VERSION 3.22)
 project(chalkwalk_ninjam VERSION 0.1.0 LANGUAGES CXX)
