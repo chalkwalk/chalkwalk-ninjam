@@ -33,9 +33,18 @@ set_target_properties(chalkwalk_ninjam PROPERTIES POSITION_INDEPENDENT_CODE ON)
 # BUILD_TESTING off before adding them: xiph's projects register their own
 # tests with ctest, and a consumer's `ctest` should run this library's suite,
 # not libogg's.
-set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-add_subdirectory(modules/ogg EXCLUDE_FROM_ALL)
-add_subdirectory(modules/vorbis EXCLUDE_FROM_ALL)
+# Guarded, so a parent that already vendors them is REUSED rather than fought
+# with. Antiphon has had its own copies for as long as it has existed, and
+# adding a second set is not a version conflict -- it is a duplicate CMake
+# target name, which fails the configure outright.
+if(NOT TARGET ogg)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    add_subdirectory(modules/ogg EXCLUDE_FROM_ALL)
+endif()
+if(NOT TARGET vorbis)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    add_subdirectory(modules/vorbis EXCLUDE_FROM_ALL)
+endif()
 target_link_libraries(chalkwalk_ninjam PUBLIC vorbis vorbisenc ogg)
 
 if(MSVC)
