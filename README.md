@@ -16,6 +16,7 @@ It works, and it is the only approach that does at intercontinental distances.
 | `SpscRing.h` | Lock-free single-producer/single-consumer queue for the audio thread |
 | `ChannelMix.h` | Summing remote channels with per-channel gain and pan |
 | `Bytes.h` | A byte buffer and little-endian conversion |
+| `RoomConventions.h` | Not the protocol: the `[key: ...]` and `/key` forms, and what a `!vote` will take |
 
 ## Documentation
 
@@ -25,6 +26,16 @@ carried, and what it takes to write a client or a bot. Start there — the
 headers tell you what the functions are, and that tells you what they are for.
 
 ## What this is not
+
+**One header is not the protocol, and says so.** `RoomConventions.h` carries
+the habits clients have grown around NINJAM's silences -- a room has a key, the
+protocol has no field for one, so it rides in chat where every client at least
+shows it as text. It is here because more than one client of ours needs it and
+none is beneath the others, and because every choice in it is a NINJAM fact
+even though NINJAM defines none of them. Text in, text out: it is the envelope,
+and what is inside is somebody else's business. Nobody is obliged to speak any
+of it; it is here so that clients which choose to can interoperate out of the
+box.
 
 **It is not a client.** There is no socket, no file, no thread and no audio
 device here — this parses and builds messages, and everything else is yours.
