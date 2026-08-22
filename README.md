@@ -1,6 +1,6 @@
 # chalkwalk-ninjam
 
-The NINJAM wire protocol, in C++20. JUCE-free, MIT.
+The NINJAM wire protocol, in C++17. JUCE-free, MIT.
 
 [NINJAM](https://www.cockos.com/ninjam/) is a way of playing music with people
 over the internet without pretending latency does not exist: everyone plays to
