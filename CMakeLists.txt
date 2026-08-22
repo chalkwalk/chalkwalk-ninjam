@@ -22,7 +22,7 @@ target_include_directories(chalkwalk_ninjam
 # is the lowest this library actually needs. It briefly required C++20 for
 # std::endian, which cost antiphon a language-standard bump it had not asked
 # for: `concept` is an identifier there and a keyword in C++20.
-target_compile_features(chalkwalk_ninjam PUBLIC cxx_std_17)
+target_compile_features(chalkwalk_ninjam PUBLIC cxx_std_20)
 set_target_properties(chalkwalk_ninjam PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 # Ogg Vorbis, for the audio NINJAM actually carries.
