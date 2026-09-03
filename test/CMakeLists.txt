@@ -15,7 +15,8 @@ add_executable(chalkwalk_ninjam_tests
     IntervalClockTests.cpp
     SpscRingTests.cpp
     ChannelMixTests.cpp
-    RoomConventionsTests.cpp)
+    RoomConventionsTests.cpp
+    VotingTests.cpp)
 
 target_link_libraries(chalkwalk_ninjam_tests
     PRIVATE chalkwalk::ninjam Catch2::Catch2WithMain)
