@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 // The server's tempo vote, as arithmetic.
@@ -100,5 +102,120 @@ private:
   int bestValue = 0;
   int bestCount = 0;
 };
+
+// The most votes a subset of the room could need on its own, given what the
+// whole room needs.
+//
+// The threshold percentage is in no message. `required` and `users` bracket it
+// -- `required == votesRequired(users, t)` holds for a run of adjacent `t` --
+// so the answer for `humans` is a range rather than a number. This returns the
+// TOP of that range, and the direction is the point: a caller topping up a vote
+// on the room's behalf should be wrong only by declining to help, never by
+// carrying something the room had not decided.
+//
+// The spread is at most one vote in every reachable case. Returns `required`
+// -- ask for everything, help with nothing -- when no threshold explains the
+// inputs, which means they did not come from one server.
+inline int mostVotesNeededAlone(int humans, int users, int required) {
+  if (humans <= 0 || users <= 0 || required <= 0)
+    return required;
+
+  int best = -1;
+  for (int t = 1; t <= 100; ++t)
+    if (votesRequired(users, t) == required) {
+      const int mine = votesRequired(humans, t);
+      if (mine > best)
+        best = mine;
+    }
+  return best < 0 ? required : best;
+}
+
+// One line of the server's voting chatter, which is the only vote protocol
+// there is. Both formats are fixed in the server and are the whole contract
+// (justinfrankel/ninjam server/usercon.cpp:1219, :1239):
+//
+//   [voting system] leading candidate: 3/5 votes for 137 BPM [each vote
+//                   expires in 60s]
+//   [voting system] setting BPM to 137
+//
+// Parsing English on purpose. It lives here rather than in a client because
+// two of ours read it and a second parser of the same sentence is a second
+// answer to the same question.
+struct Line {
+  bool valid = false;
+  bool isBpm = true;   // false means BPI
+  int value = 0;       // the value being voted for, or set
+  int votes = 0;       // cast so far
+  int required = 0;    // needed to carry -- a vote count, not a head count
+  int timeoutSeconds = 0;
+  bool settled = false; // "setting BPM to N": it carried
+};
+
+namespace detail {
+
+// The first integer at or after `from`. Returns false if there is none, so a
+// truncated line parses as no line rather than as zeroes.
+inline bool intAt(const std::string &s, std::size_t from, int &out) {
+  while (from < s.size() && (s[from] < '0' || s[from] > '9'))
+    ++from;
+  if (from >= s.size())
+    return false;
+  int v = 0;
+  while (from < s.size() && s[from] >= '0' && s[from] <= '9') {
+    v = v * 10 + (s[from] - '0');
+    ++from;
+  }
+  out = v;
+  return true;
+}
+
+} // namespace detail
+
+inline Line parseLine(const std::string &text) {
+  Line line;
+  if (text.rfind("[voting system]", 0) != 0)
+    return line;
+
+  const auto setBpm = text.find("setting BPM to");
+  const auto setBpi = text.find("setting BPI to");
+  if (setBpm != std::string::npos || setBpi != std::string::npos) {
+    const bool bpm = setBpm != std::string::npos;
+    int v = 0;
+    if (!detail::intAt(text, bpm ? setBpm : setBpi, v))
+      return line;
+    line.valid = true;
+    line.settled = true;
+    line.isBpm = bpm;
+    line.value = v;
+    return line;
+  }
+
+  const auto lead = text.find("leading candidate:");
+  if (lead == std::string::npos)
+    return line;
+
+  const auto slash = text.find('/', lead);
+  const auto forPos = text.find(" for ", lead);
+  if (slash == std::string::npos || forPos == std::string::npos)
+    return line;
+
+  if (!detail::intAt(text, lead + 18, line.votes))
+    return line;
+  if (!detail::intAt(text, slash, line.required))
+    return line;
+  if (!detail::intAt(text, forPos, line.value))
+    return line;
+
+  // BPI is the exception, so it is the one tested for: an unrecognised unit
+  // reads as BPM, which is what the sentence says when the word is missing.
+  line.isBpm = text.find(" BPI", forPos) == std::string::npos;
+
+  const auto expires = text.find("expires in", forPos);
+  if (expires != std::string::npos)
+    detail::intAt(text, expires, line.timeoutSeconds);
+
+  line.valid = true;
+  return line;
+}
 
 } // namespace chalkwalk::ninjam::voting

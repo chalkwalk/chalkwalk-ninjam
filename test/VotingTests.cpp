@@ -4,6 +4,7 @@
 #include <chalkwalk/ninjam/Voting.h>
 
 #include <cmath>
+#include <string>
 
 // The arithmetic only. Nothing here opens a socket or parses a line -- what is
 // asserted is the rounding, which is the part every hand-written copy of this
@@ -103,6 +104,89 @@ public:
     Tally none;
     expect(!none.carries(1, 1));
     expect(!none.carries(0, 50));
+
+    // --- reading the room's own chatter ---
+
+    beginTest("a leading candidate line, in full");
+    {
+      const auto l = parseLine("[voting system] leading candidate: 3/5 votes "
+                               "for 137 BPM [each vote expires in 60s]");
+      expect(l.valid);
+      expect(!l.settled);
+      expect(l.isBpm);
+      expectEquals(l.votes, 3);
+      expectEquals(l.required, 5);
+      expectEquals(l.value, 137);
+      expectEquals(l.timeoutSeconds, 60);
+    }
+
+    beginTest("a BPI candidate is not a BPM one");
+    {
+      const auto l = parseLine("[voting system] leading candidate: 1/2 votes "
+                               "for 16 BPI [each vote expires in 120s]");
+      expect(l.valid);
+      expect(!l.isBpm);
+      expectEquals(l.value, 16);
+      expectEquals(l.required, 2);
+    }
+
+    beginTest("a carried vote says so");
+    {
+      const auto l = parseLine("[voting system] setting BPM to 137");
+      expect(l.valid);
+      expect(l.settled);
+      expect(l.isBpm);
+      expectEquals(l.value, 137);
+
+      const auto i = parseLine("[voting system] setting BPI to 16");
+      expect(i.valid && i.settled && !i.isBpm);
+      expectEquals(i.value, 16);
+    }
+
+    beginTest("anything else is not a vote line");
+    expect(!parseLine("").valid);
+    expect(!parseLine("hello room").valid);
+    expect(!parseLine("[voting system] Voting not enabled").valid);
+    expect(!parseLine("[voting system] !vote requires <bpm|bpi> <value> "
+                      "parameters")
+                .valid);
+    expect(!parseLine("look: [voting system] setting BPM to 137").valid,
+           "the prefix must lead the line, or any chat could forge one");
+
+    beginTest("a truncated line parses as no line, not as zeroes");
+    expect(!parseLine("[voting system] leading candidate: 3").valid);
+    expect(!parseLine("[voting system] leading candidate: 3/5 votes").valid);
+    expect(!parseLine("[voting system] setting BPM to").valid);
+
+    // --- what a subset of the room would have needed ---
+
+    beginTest("the threshold is recovered, or over-stated, never under");
+    // For every room and threshold, what this returns must be at least what
+    // the humans really needed -- otherwise a band helps a vote the room had
+    // not carried.
+    for (int t = 1; t <= 100; ++t)
+      for (int users = 2; users <= 16; ++users)
+        for (int humans = 1; humans < users; ++humans) {
+          const int required = votesRequired(users, t);
+          if (required <= 0)
+            continue;
+          const int truth = votesRequired(humans, t);
+          const int guess = mostVotesNeededAlone(humans, users, required);
+          expect(guess >= truth,
+                 "under-stated at t=" + std::to_string(t) + " users=" +
+                     std::to_string(users) + " humans=" +
+                     std::to_string(humans));
+          expect(guess <= truth + 1,
+                 "over-stated by more than one vote at t=" +
+                     std::to_string(t) + " users=" + std::to_string(users) +
+                     " humans=" + std::to_string(humans));
+        }
+
+    beginTest("nonsense in, no help out");
+    expectEquals(mostVotesNeededAlone(3, 5, 0), 0);
+    expectEquals(mostVotesNeededAlone(0, 5, 3), 3);
+    expectEquals(mostVotesNeededAlone(3, 5, 99), 99,
+                 "no threshold explains 99 of 5");
   }
 };
 
