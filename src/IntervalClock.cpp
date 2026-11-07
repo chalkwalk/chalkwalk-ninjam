@@ -36,6 +36,24 @@ void IntervalClock::reset() {
   }
 }
 
+void IntervalClock::seekToBeats(double phaseBeats) {
+  if (!isValid() || bpi <= 0)
+    return;
+  int64_t pos = (int64_t)std::llround(phaseBeats / (double)bpi *
+                                      (double)intervalSamples);
+  if (pos <= 0) {
+    reset();
+    return;
+  }
+  if (pos >= intervalSamples)
+    pos = intervalSamples - 1;
+  posInInterval = pos;
+  atIntervalStart = false;
+  nextBeat = 0;
+  while (nextBeat < bpi && beatOffsets[(size_t)nextBeat] < (int)pos)
+    ++nextBeat;
+}
+
 void IntervalClock::recomputeGrid() {
   beatOffsets.clear();
   intervalSamples = 0;

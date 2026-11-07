@@ -367,6 +367,86 @@ public:
       expect(checked > 0, "no events after the tempo switch");
     }
 
+    beginTest("seekToBeats resumes mid-interval with the grid intact");
+    for (double sr : {44100.0, 48000.0})
+      for (int block : {61, 512}) {
+        IntervalClock c;
+        c.prepare(sr);
+        c.setTempo(110, 16);
+        c.seekToBeats(4.5);
+        const int len = c.samplesPerInterval();
+        const int64_t pos = c.samplePosInInterval();
+        expectWithinAbsoluteError(c.phaseBeats(), 4.5, 16.0 / len);
+
+        std::vector<IntervalClock::Event> events;
+        int64_t elapsed = 0;
+        int nextExpectedBeat = 5;
+        bool sawBoundary = false;
+        while (!sawBoundary) {
+          events.clear();
+          c.advance(block, events);
+          for (const auto &e : events) {
+            const int64_t at = elapsed + e.sampleOffset;
+            if (e.type == IntervalClock::Event::Type::IntervalStart) {
+              expectEquals(at, (int64_t)len - pos,
+                           "boundary lands where the interval ends");
+              expectEquals(nextExpectedBeat, 16, "every beat after 4.5 fired");
+              sawBoundary = true;
+              break;
+            }
+            expectEquals(e.beatIndex, nextExpectedBeat, "beats in order");
+            expectEquals(at, (int64_t)c.beatStartSample(e.beatIndex) - pos,
+                         "beat on the grid");
+            ++nextExpectedBeat;
+          }
+          elapsed += block;
+        }
+      }
+
+    beginTest("seekToBeats on a beat fires that beat");
+    {
+      IntervalClock c;
+      c.prepare(48000.0);
+      c.setTempo(120, 16);
+      c.seekToBeats(5.0);
+      std::vector<IntervalClock::Event> events;
+      c.advance(64, events);
+      expect(!events.empty() && events.front().beatIndex == 5 &&
+                 events.front().sampleOffset == 0,
+             "resuming exactly on beat 5 clicks beat 5");
+      expect(!events.empty() &&
+                 events.front().type == IntervalClock::Event::Type::Beat,
+             "no interval start mid-interval");
+    }
+
+    beginTest("seekToBeats(0) is reset");
+    {
+      IntervalClock c;
+      c.prepare(48000.0);
+      c.setTempo(120, 16);
+      std::vector<IntervalClock::Event> events;
+      c.advance(1000, events);
+      c.seekToBeats(0.0);
+      events.clear();
+      c.advance(64, events);
+      expect(events.size() >= 2 &&
+                 events[0].type == IntervalClock::Event::Type::IntervalStart &&
+                 events[0].sampleOffset == 0,
+             "the next block opens an interval");
+    }
+
+    beginTest("a tempo change pending across a seek still waits for the boundary");
+    {
+      IntervalClock c;
+      c.prepare(48000.0);
+      c.setTempo(120, 16);
+      std::vector<IntervalClock::Event> events;
+      c.advance(100, events);
+      c.setTempo(100, 16);
+      c.seekToBeats(8.0);
+      expectEquals(c.getBpm(), 120, "the current interval keeps its tempo");
+    }
+
     beginTest("degenerate inputs produce no events and do not hang");
     {
       std::vector<IntervalClock::Event> ev;

@@ -40,6 +40,14 @@ public:
   // (and Beat 0) at sample offset 0.
   void reset();
 
+  // Continues from `phaseBeats` (0 .. bpi) into the current interval, as a
+  // clock that had been running all along would be there. A beat exactly at
+  // that position fires on the next advance(); no IntervalStart does, unless
+  // the position is 0, which is reset(). A tempo change still pending applies
+  // at the next boundary, as it always does. For a host that hands the grid
+  // back mid-interval -- a DAW that stops while the jam carries on.
+  void seekToBeats(double phaseBeats);
+
   // Appends events in ascending sampleOffset order. At an interval boundary
   // both IntervalStart and Beat{0} are emitted, IntervalStart first.
   void advance(int numSamples, std::vector<Event> &out);
