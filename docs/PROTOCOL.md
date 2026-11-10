@@ -45,6 +45,13 @@ if (protocol::readFrameHeader(fiveBytes, h)) {
 accumulates bytes into a buffer, takes a header off the front when five bytes
 are available, waits for `h.length` more, and then dispatches on `h.type`.
 
+**Send nothing with a payload over 16 KiB.** `kMaxPayload` is what this
+library will *accept*, and it is generous on purpose. The stock server is not:
+it closes the connection on any frame whose payload exceeds 16384 bytes, with
+no message. An interval's audio therefore goes as several `interval write`
+frames; 8 KiB of audio each is comfortably inside the limit once the GUID and
+flags are added.
+
 ## The conversation
 
 ```
