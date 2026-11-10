@@ -12,7 +12,8 @@ add_library(chalkwalk_ninjam STATIC
     src/NinjamProtocol.cpp
     src/Sha1.cpp
     src/IntervalClock.cpp
-    src/VorbisCodec.cpp)
+    src/VorbisCodec.cpp
+    src/SessionArchive.cpp)
 add_library(chalkwalk::ninjam ALIAS chalkwalk_ninjam)
 
 target_include_directories(chalkwalk_ninjam
